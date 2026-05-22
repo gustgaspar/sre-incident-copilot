@@ -3,7 +3,7 @@ import { db } from './database';
 export async function processPayment(userId: string, amount: number, paymentMethodId: string) {
   // Simula verificação no banco de dados
   const user = await db.user.findById(userId);
-  
+
   if (!user) {
     throw new Error('Usuário não encontrado para processar pagamento');
   }
