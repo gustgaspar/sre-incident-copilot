@@ -36,14 +36,36 @@ export default function IncidentWarRoom({ params }: { params: Promise<{ id: stri
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
+    const container = chatContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior
+      });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    // Se o usuário está próximo do final (dentro de 180px) ou se a última mensagem é do usuário
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 180;
+    const lastMessage = messages[messages.length - 1];
+    const isUserMessage = lastMessage?.role === 'user';
+
+    if (isUserMessage) {
+      scrollToBottom('smooth');
+    } else if (isNearBottom) {
+      // Usamos behavior 'auto' durante streaming para evitar engasgos/delay no scroll
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'auto'
+      });
+    }
   }, [messages, isLoading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,7 +213,10 @@ export default function IncidentWarRoom({ params }: { params: Promise<{ id: stri
           </CardHeader>
           
           <CardContent className="flex-1 overflow-hidden p-0 flex flex-col justify-between">
-            <ScrollArea className="flex-1 p-4">
+            <div 
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto min-w-0 min-h-0 p-4 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent"
+            >
               <div className="space-y-4 pb-4">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-center text-zinc-400 py-16 px-4">
@@ -247,9 +272,8 @@ export default function IncidentWarRoom({ params }: { params: Promise<{ id: stri
                     </div>
                   </div>
                 )}
-                <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
+            </div>
 
             {error && (
               <div className="p-3 mx-4 mb-2 text-xs bg-red-950/40 border border-red-500/20 text-red-400 rounded-lg animate-in fade-in">
